@@ -1,38 +1,39 @@
-# import sys
-# import util
+import sys
+import util
 
-# sys.setrecursionlimit(10000)
+sys.setrecursionlimit(10000)
 
-# ### Model (search problem)
+### Model (search problem)
 
-# class TransportationProblem(object):
+class TransportationProblem(object):
 
-#     def __init__(self, N):
-#         # N = number of blocks
-#         self.N = N
+    def __init__(self, N, weights):
+        # N = number of blocks
+        self.weights = weights
+        self.N = N
 
-#     def startState(self):
-#         return 1
+    def startState(self):
+        return 1
     
-#     def isEnd(self, state):
-#         return state == self.N
+    def isEnd(self, state):
+        return state == self.N
     
-#     def succAndCost(self, state):
-#         # return list of (action, newState, cost) triples
-#         result = []
-#         if state + 1 <= self.N:
-#             result.append(('walk', state + 1, 1))
-#         if state * 2 <= self.N:
-#             result.append(('tram', state * 2, 2))
-#         return result
+    def succAndCost(self, state):
+        # return list of (action, newState, cost) triples
+        result = []
+        if state + 1 <= self.N:
+            result.append(('walk', state + 1, self.weights["walk"]))
+        if state * 2 <= self.N:
+            result.append(('tram', state * 2, self.weights["tram"]))
+        return result
     
-# def printSolution(solution):
-#     totalCost, history = solution
-#     print('totalCost: {}'.format(totalCost))
-#     for item in history:
-#         print(item)
+def printSolution(solution):
+    totalCost, history = solution
+    print('totalCost: {}'.format(totalCost))
+    for item in history:
+        print(item)
 
-# ### Algorithms
+### Algorithms
     
 # def backtrackingSearch(problem):
 #     # Best solution found so far (dictionary because of python scoping technicality)
@@ -71,38 +72,30 @@
 
 #     return (best['cost'], best['history'])
 
-# def dynamicProgramming(problem):
-#     cache = {}
+def dynamicProgramming(problem):
+    cache = {}
 
-#     def futureCost(state):
-#         # Base case
-#         if problem.isEnd(state):
-#             return 0
-#         if state in cache:
-#             return cache[state]
-        
-#         possibleActions = problem.succAndCost(state)
-#         # print("possibleActions >>>> ", possibleActions)
-        
-#         costs = []
+    def futureCost(state):
+        if problem.isEnd(state):
+            return 0
+        if state in cache:
+            return cache[state][0]
 
-#         for i in range(len(possibleActions)):
-#             action = possibleActions[i][0]
-#             # print("action >>>> ", action)
+        result = min((cost + futureCost(newState), action, newState, cost) for action, newState, cost in problem.succAndCost(state))
 
-#             newState = possibleActions[i][1]
-#             # print("newState >>>> ", newState)
+        cache[state] = result
+        return result[0]
 
-#             cost = possibleActions[i][2]
-#             # print("cost >>>> ", cost)
+    state = problem.startState()
+    totalCost = futureCost(state)        
 
-#             costs.append(cost + futureCost(newState))
+    history = []
+    while not problem.isEnd(state):
+        _, action, newState, cost = cache[state]
+        history.append((action, newState, cost))
+        state = newState
 
-#         cache[state] = min(costs)
-#         result = min(cost + futureCost(newState) for action, newState, cost in problem.succAndCost(state))
-#         cache[state] = result
-#         return result
-#     return (futureCost(problem.startState()), [])
+    return (futureCost(problem.startState()), history)
 
 # def uniformCostSearch(problem):
 #     frontier = util.PriorityQueue()
@@ -117,11 +110,48 @@
 #             frontier.update(newState, pastCost + cost)
 
 
-# ### Main
+### Main
 
 # problem = TransportationProblem(N = 40)
-# # print(problem.succAndCost(3))
-# # print(problem.succAndCost(9))
-# printSolution(backtrackingSearch(problem))
 # printSolution(dynamicProgramming(problem))
+# print(problem.succAndCost(3))
+# print(problem.succAndCost(9))
+# printSolution(backtrackingSearch(problem))
 # printSolution(uniformCostSearch(problem))
+
+def predict(N, weights):
+    problem = TransportationProblem(N, weights)
+    totalCost, history = dynamicProgramming(problem)
+    return [action for action, newState, cost in history]
+
+def generateExamples():
+    trueWeights = {'walk': 2, 'tram': 5}
+    return [(N, predict(N, trueWeights)) for N in range(1,300)]
+
+def structuredPerception(examples):
+    weights = {'walk': 0, 'tram': 0}
+
+    for t in range(100):
+        numMistakes = 0
+        for N, trueActions in examples:
+            predActions = predict(N, weights)
+
+            if predActions != trueActions:
+                numMistakes += 1
+            
+            for action in trueActions:
+                weights[action] -= 1
+            for action in predActions:
+                weights[action] += 1
+        print('Iteration {}, numMistakes = {}, weights = {}'.format(t, numMistakes, weights))
+       
+        if numMistakes == 0:
+            break            
+
+examples = generateExamples()
+
+print('Training Dataset')
+for example in examples:
+    print(' ', example)
+
+structuredPerception(examples)

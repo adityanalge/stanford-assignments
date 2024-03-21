@@ -42,7 +42,7 @@ class ShortestPathProblem(SearchProblem):
     def isEnd(self, state: State) -> bool:
         pass
         # ### START CODE HERE ###
-        return self.endTag in self.cityMap.tags.get(state.location, [])
+        return self.endTag in self.cityMap.tags.get(state.location)
         # ### END CODE HERE ###
 
     def successorsAndCosts(self, state: State) -> List[Tuple[str, State, float]]:
@@ -50,8 +50,7 @@ class ShortestPathProblem(SearchProblem):
         # ### START CODE HERE ###
         result = []
         current_state = state.location
-
-        for adjacent_state, cost_adjacent_state in self.cityMap.distances.get(current_state, []).items():
+        for adjacent_state, cost_adjacent_state in self.cityMap.distances[current_state].items():
             # print("Cost of moving from Current State %s to New State %s is %s \n" % (current_state, adjacent_state, cost_adjacent_state))
             result.append((adjacent_state, State(adjacent_state, None), cost_adjacent_state))
         return result
@@ -121,7 +120,7 @@ class WaypointsShortestPathProblem(SearchProblem):
         pass
         # ### START CODE HERE ###
         if not state.memory:
-            return self.endTag in self.cityMap.tags.get(state.location, [])
+            return self.endTag in self.cityMap.tags.get(state.location)
         else:
             return False
         # ### END CODE HERE ###
@@ -129,11 +128,11 @@ class WaypointsShortestPathProblem(SearchProblem):
     def successorsAndCosts(self, state: State) -> List[Tuple[str, State, float]]:
         
         result = []
-        current_state, way_points = state.location, state.memory
+        current_location, way_points = state.location, state.memory
 
-        for adjacent_state, cost_adjacent_state in self.cityMap.distances.get(current_state, []).items():
+        for adjacent_state, cost_adjacent_state in self.cityMap.distances.get(current_location, []).items():
 
-            adjacent_state_tags = self.cityMap.tags.get(adjacent_state, [])
+            adjacent_state_tags = set(self.cityMap.tags.get(adjacent_state, []))
 
             incomplete_way_points = []
 
@@ -170,8 +169,8 @@ def getStanfordWaypointsShortestPathProblem() -> WaypointsShortestPathProblem:
 
     # ### START CODE HERE ###
     startLocation = "5714338786"
-    endTag = "label=6317073297"
     waypointTags = []
+    endTag = "label=6317073297"
     # ### END CODE HERE ###
     return WaypointsShortestPathProblem(startLocation, waypointTags, endTag, cityMap)
 
@@ -211,7 +210,7 @@ def aStarReduction(problem: SearchProblem, heuristic: Heuristic) -> SearchProble
             
             for adjacent_state, cost_adjacent_state in problem.cityMap.distances[current_state].items():
                 # print("Cost of moving from Current State %s to New State %s is %s \n" % (current_state, adjacent_state, cost_adjacent_state))
-                result.append((adjacent_state, State(adjacent_state, None), cost_adjacent_state + (heuristic.evaluate(State(adjacent_state)) - heuristic.evaluate(State(current_state)))))
+                result.append((adjacent_state, State(adjacent_state, None), cost_adjacent_state + (heuristic.evaluate(adjacent_state) - heuristic.evaluate(current_state))))
             return result
             # ### END CODE HERE ###
 
@@ -233,47 +232,11 @@ class StraightLineHeuristic(Heuristic):
 
         # Precompute
         # ### START CODE HERE ###
-        for key, value in self.cityMap.tags.items():
-            if self.endTag in value:
-                self.endLocation = key
-        
-        self.endGeoLocation = self.cityMap.geoLocations[self.endLocation]
         # ### END CODE HERE ###
 
     def evaluate(self, state: State) -> float:
         pass
         # ### START CODE HERE ###
-        
-        # # To print the first five items of the distances dictionary
-        # print("distances 1>>>> ", list(self.cityMap.distances.items())[0:2])
-
-        # print("tags 2>>>> ", list(self.cityMap.tags.items())[0:2])
-
-        # # To print the first five items of the geoLocations dictionary
-        # print("geoLocations 3>>>> ", list(self.cityMap.geoLocations.items())[0:2])
-
-        # # for key, value in self.cityMap.tags.items():
-        # #     if state.location in value:
-        # #         geoLocations = key
-            
-        # print("self.endTag >>>> ", self.endTag)
-        # print("self.endLocation >>>> ", self.endLocation)
-        # print("self.endGeoLocation >>>> ", self.endGeoLocation)
-        # print("state >>>> ", state)
-
-        # for key, value in self.cityMap.tags.items():
-        #     if key == state:
-        #         state_tags = value
-
-        # print("state_tags >>>> ", state_tags)
-
-
-
-        # geoLocations = self.cityMap.tags.items()
-        # print("state.location 3>>>> ", self.cityMap.geoLocations.items()[0:5])
-        # temp = state.location if state.location != None else state
-        
-        return computeDistance(self.cityMap.geoLocations[state.location], self.endGeoLocation)
         # ### END CODE HERE ###
 
 
@@ -293,17 +256,12 @@ class NoWaypointsHeuristic(Heuristic):
         # Define a reversed shortest path problem from a special END state
         # (which connects via 0 cost to all end locations) to `startLocation`.
         class ReverseShortestPathProblem(SearchProblem):
-            def __init__(self, endTag: str, cityMap: CityMap):
-                self.endTag = endTag
-                self.cityMap = cityMap
-
             def startState(self) -> State:
                 """
                 Return special "END" state
                 """
                 pass
                 # ### START CODE HERE ###
-                return State(location="special_end", memory=None)
                 # ### END CODE HERE ###
 
             def isEnd(self, state: State) -> bool:
@@ -314,7 +272,6 @@ class NoWaypointsHeuristic(Heuristic):
                 """
                 pass
                 # ### START CODE HERE ###
-                return False  
                 # ### END CODE HERE ###
 
             def successorsAndCosts(
@@ -326,23 +283,12 @@ class NoWaypointsHeuristic(Heuristic):
                 # Else, return all the successors of current location and their corresponding distances according to the cityMap
                 pass
                 # ### START CODE HERE ###
-                if state.location == "special_end":
-                    # Correctly filter locations with the desired endTag and create tuples with a cost of 0
-                    return [(loc, State(loc, None), 0) for loc, tags in self.cityMap.tags.items() if self.endTag in tags]
-                else:
-                    # Return successors for a normal state, assuming such a method exists in cityMap
-                    # This part would need to be adapted based on how your CityMap class is implemented
-                    return [(adjacent, State(adjacent, None), cost) for adjacent, cost in self.cityMap.distances.get(state.location, {}).items()]
-
                 # ### END CODE HERE ###
 
         # Call UCS.solve on our `ReverseShortestPathProblem` instance. Because there is
         # *not* a valid end state (`isEnd` always returns False), will exhaustively
         # compute costs to *all* other states.
         # ### START CODE HERE ###
-        problem_instance = ReverseShortestPathProblem(endTag, cityMap)
-        ucs = UniformCostSearch(verbose=0)
-        ucs.solve(problem_instance)
         # ### END CODE HERE ###
 
         # Now that we've exhaustively computed costs from any valid "end" location
@@ -350,11 +296,42 @@ class NoWaypointsHeuristic(Heuristic):
         # the minimum cost path to each state in our state space.
         #   > Note that we're making a critical assumption here: costs are symmetric!
         # ### START CODE HERE ###
-        self.pastCosts = {State(location=loc, memory=None): cost for loc, cost in ucs.pastCosts.items()}
+        print("UCS.pastCosts >>>> ", ucs.pastCosts)
         # ### END CODE HERE ###
 
     def evaluate(self, state: State) -> float:
         pass
         # ### START CODE HERE ###
-        return self.pastCosts.get(state, float('inf'))
         # ### END CODE HERE ###
+
+
+
+
+
+# class NoWaypointsHeuristic(Heuristic):
+#     def __init__(self, endTag: str, cityMap: CityMap):
+#         class ReverseShortestPathProblem(SearchProblem):
+#             def __init__(self, endTag: str, cityMap: CityMap):
+#                 self.endTag = endTag
+#                 self.cityMap = cityMap
+
+#             def startState(self) -> State:
+#                 return State(location="special_end", memory=None)
+
+#             def isEnd(self, state: State) -> bool:
+#                 return False
+
+#             def successorsAndCosts(self, state: State) -> List[Tuple[str, State, float]]:
+#                 if state.location == "special_end":
+#                     return [(loc, State(loc, None), 0) for loc, tags in self.cityMap.tags.items() if self.endTag in tags]
+#                 else:
+#                     return [(adjacent, State(adjacent, None), cost) for adjacent, cost in self.cityMap.distances.get(state.location, {}).items()]
+
+#         problem_instance = ReverseShortestPathProblem(endTag, cityMap)
+#         ucs = UniformCostSearch(verbose=0)
+#         ucs.solve(problem_instance)
+#         self.pastCosts = {State(location=loc, memory=None): cost for loc, cost in ucs.pastCosts.items()}
+
+#     def evaluate(self, state: State) -> float:
+#         # Note: Assuming `ucs.pastCosts` keys are State instances; adjust if they are location strings.
+#         return self.pastCosts.get(state, float('inf'))
