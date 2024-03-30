@@ -597,7 +597,6 @@ class Test_4c(GradedTestCase):
     def setUp(self):
 
         self.endTag3c = makeTag("wheelchair", "yes")
-        print("endTag3C >>>> ", self.endTag3c)
 
         try:
             self.stanfordNoWaypointsHeuristic = submission.NoWaypointsHeuristic(
@@ -613,8 +612,6 @@ class Test_4c(GradedTestCase):
         expectedCost: Optional[float] = None
     ):
         """Targeted test for `NoWaypointsHeuristic` -- uses the full Stanford map."""
-        print("startLocation >>>> ", startLocation)
-        print("endTag >>>> ", endTag)
         heuristic = submission.NoWaypointsHeuristic(endTag, stanfordMap)
         heuristicCost = heuristic.evaluate(util.State(startLocation))
         if expectedCost is not None:
