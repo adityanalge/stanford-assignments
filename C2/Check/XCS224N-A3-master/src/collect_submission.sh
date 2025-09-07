@@ -1,16 +1,16 @@
-#! /bin/bash
+#!/bin/bash
 
-rm -f assignment3_submission.zip 
-pushd submission
+# Delete existing zip file if it exists
+rm -f assignment3_submission.zip
+
+# Change into the submission directory
+cd submission || exit
 echo "Collecting submission files..."
 
-zip -r ../assignment3_submission.zip \
-  __init__.py \
-  parser_model.py \
-  parser_transitions.py \
-  parser_utils.py \
-  train.py
+# Use PowerShell to zip files (works on Windows natively)
+powershell.exe -Command "Compress-Archive -Path '__init__.py','parser_model.py','parser_transitions.py','parser_utils.py','train.py' -DestinationPath '../assignment3_submission.zip'"
 
-popd
+# Go back to original directory
+cd ..
 
 echo "Done!"

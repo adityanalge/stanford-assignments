@@ -21,6 +21,13 @@ class PartialParse(object):
         self.sentence = sentence
 
         ### START CODE HERE
+
+        self.stack = ["ROOT"]
+        
+        self.buffer = list(sentence)
+        
+        self.dependencies = []
+        
         ### END CODE HERE
 
     def parse_step(self, transition):
@@ -32,6 +39,21 @@ class PartialParse(object):
                         transition.
         """
         ### START CODE HERE
+        
+        match transition:
+            case "S":
+                self.stack.append(self.buffer.pop(0))
+            case "LA":
+                head = self.stack[-1]
+                dependent = self.stack[-2]
+                self.dependencies.append((head, dependent))
+                del self.stack[-2]
+            case "RA":
+                head = self.stack[-2]
+                dependent = self.stack[-1]
+                self.dependencies.append((head, dependent))
+                self.stack.pop()
+        
         ### END CODE HERE
 
     def parse(self, transitions):
@@ -69,6 +91,32 @@ def minibatch_parse(sentences, model, device, batch_size):
     dependencies = None
 
     ### START CODE HERE
+    # Initialize PartialParse objects for every sentence
+    partial_parses = [PartialParse(sentence) for sentence in sentences]
+
+    # A list that we’ll prune as parses finish
+    unfinished_parses = partial_parses[:]
+
+    # Continue until every parse is complete
+    while unfinished_parses:
+        # Grab a minibatch (the first `batch_size` parses)
+        minibatch = unfinished_parses[:batch_size]
+
+        # Ask the model for the next transition for each parse in the minibatch
+        transitions = model.predict(minibatch, device)
+
+        # Apply the predicted transition to each partial parse
+        for pp, transition in zip(minibatch, transitions):
+            pp.parse_step(transition)
+
+        # Filter out parses that are finished (buffer empty *and* stack has only ROOT)
+        unfinished_parses = [
+            pp for pp in unfinished_parses
+            if not (len(pp.buffer) == 0 and len(pp.stack) == 1)
+        ]
+
+    # Return the dependencies for each completed parse
+    return [pp.dependencies for pp in partial_parses]
     ### END CODE HERE
 
     return dependencies

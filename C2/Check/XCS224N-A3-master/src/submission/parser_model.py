@@ -59,6 +59,16 @@ class ParserModel(nn.Module):
         ###     Linear Layer: https://pytorch.org/docs/stable/generated/torch.nn.Linear.html#torch.nn.Linear
         ###     Dropout: https://pytorch.org/docs/stable/generated/torch.nn.Dropout.html#torch.nn.Dropout
         ### START CODE HERE (~3 Lines)
+
+        # function to take a vector and convert it to a hidden size
+        self.embed_to_hidden = nn.Linear(self.n_features * self.embed_size, self.hidden_size)
+
+        # dropout a percentage of values picked randomly to avoid overfitting
+        self.dropout = nn.Dropout(self.dropout_prob)
+
+        # function to return logits based on hidden layer
+        self.hidden_to_logits = nn.Linear(self.hidden_size, self.n_classes)
+
         ### END CODE HERE
 
         self.reset_parameters()
@@ -87,6 +97,12 @@ class ParserModel(nn.Module):
 
         pass
         ### START CODE HERE (~2 Lines)
+
+        # using Xavier initialization to reinitialize weights, as it's better than random
+        # and helps prevent exploding or vanishing gradients
+        nn.init.xavier_uniform_(self.embed_to_hidden.weight)
+        nn.init.xavier_uniform_(self.hidden_to_logits.weight)
+
         ### END CODE HERE
 
     def embedding_lookup(self, t):
@@ -120,6 +136,13 @@ class ParserModel(nn.Module):
         ###     Embedding Layer: https://pytorch.org/docs/stable/generated/torch.nn.Embedding.html 
         ###     View: https://pytorch.org/docs/stable/tensor_view.html
         ### START CODE HERE (~1-3 Lines)
+
+        # look up pretained embeddings for input tokens
+        x = self.pretrained_embeddings(t)
+
+        # reshape the tensor from (batch_size, n_features, embedding_size) to a single line tensor of (batch_size, n_features * embedding_size)
+        x = x.view(x.size(0), -1)
+        
         ### END CODE HERE
         return x
 
@@ -155,5 +178,21 @@ class ParserModel(nn.Module):
         ### Please see the following docs for support:
         ###     ReLU: https://pytorch.org/docs/stable/generated/torch.nn.functional.relu.html#torch.nn.functional.relu 
         ###  START CODE HERE (~3-5 lines)
+
+        # get embedding vectors for selected word positions and flatten
+        x = self.embedding_lookup(t)
+
+        # pass through first linear layer to reduce it down to hidden size
+        x = self.embed_to_hidden(x)
+
+        # apply relu to add non-linearity and zero out negatives
+        x = F.relu(x)
+
+        # randomly zero out some values during training to prevent overfitting
+        x = self.dropout(x)
+
+        # get scores for each possible action (SHIFT, LEFT-ARC, RIGHT-ARC)
+        logits = self.hidden_to_logits(x)
+
         ### END CODE HERE
         return logits

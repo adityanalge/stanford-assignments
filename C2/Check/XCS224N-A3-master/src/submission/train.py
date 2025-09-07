@@ -91,6 +91,19 @@ def train_for_epoch(parser, train_data, dev_data, optimizer, loss_func, batch_si
             ### Please see the following docs for support:
             ###     Optimizer Step: https://pytorch.org/docs/stable/optim.html#optimizer-step
             ### START CODE HERE (~4 lines)
+
+            # run input batch through the model to get raw prediction scores 
+            logits = parser.model(train_x)
+
+            # compare predictions to the true labels and compute the loss
+            loss = loss_func(logits, train_y)
+
+            # backpropagate the loss to compute gradients for each model weight
+            loss.backward()
+
+            # update the model weights slightly using the computed gradients
+            optimizer.step()
+
             ### END CODE HERE
             prog.update(1)
             loss_meter.update(loss.item())
